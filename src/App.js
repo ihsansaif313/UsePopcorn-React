@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const tempMovieData = [
   {
@@ -14,7 +14,7 @@ const tempMovieData = [
     Year: "1999",
     Poster:
       "https://m.media-amazon.com/images/M/MV5BNzQzOTk3OTAtNDQ0Zi00ZTVkLWI0MTEtMDllZjNkYzNjNTc4L2ltYWdlXkEyXkFqcGdeQXVyNjU0OTQ0OTY@._V1_SX300.jpg",
-    },
+  },
   {
     imdbID: "tt6751668",
     Title: "Parasite",
@@ -50,14 +50,26 @@ const tempWatchedData = [
 const average = (arr) =>
   arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
 
-
+const key = 90037794;
 export default function App() {
-  const [movies, setMovies] = useState(tempMovieData);
+  const [query, setQuery] = useState("hollywood");
+  const [movies, setMovies] = useState([]);
   const [watched, setWatched] = useState(tempWatchedData);
+  console.log(movies);
+  function handleSearch(e){
+    setQuery(e);
+  }
+  const search=query;
+  useEffect(function () {
+    fetch(`http://www.omdbapi.com/?apikey=${key}&s=${search}`)
+      .then((res) => res.json())
+      .then((data) => setMovies(data.Search || []));
+  }, [search]);
+
   return (
     <>
       <Navbar>
-        <Search />
+        <Search onChange={handleSearch}/>
         <WatchedNum>
           Found <strong>{movies.length}</strong> results
         </WatchedNum>
@@ -67,12 +79,10 @@ export default function App() {
           <Movies movies={movies} />
         </Box>
         <Box>
-        <WatchedMoviesSummary watched={watched} />
-        <WatchedMoviesList watched={watched} />
+          <WatchedMoviesSummary watched={watched} />
+          <WatchedMoviesList watched={watched} />
         </Box>
-       
       </Main>
-      
     </>
   );
 }
@@ -92,15 +102,14 @@ function Logo() {
     </div>
   );
 }
-function Search() {
-  const [query, setQuery] = useState("");
+function Search({ onChange }) {
   return (
     <input
-    className="search"
+      className="search"
       type="text"
       placeholder="Search movies..."
-      value={query}
-      onChange={(e) => setQuery(e.target.value)}
+      // value={query}
+      onChange={(e) => onChange(e.target.value)}
     />
   );
 }
@@ -109,14 +118,9 @@ function WatchedNum({ children }) {
   return <p className="num-results">{children}</p>;
 }
 
-function Main({children}){
-  return(
-    <main className="main">
-          {children}
-        </main>
-  )
-  }
-  
+function Main({ children }) {
+  return <main className="main">{children}</main>;
+}
 
 function Box({ children }) {
   const [isOpen1, setIsOpen1] = useState(true);
@@ -206,4 +210,3 @@ function WatchedMoviesList({ watched }) {
     </ul>
   );
 }
-
