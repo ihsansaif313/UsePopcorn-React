@@ -55,16 +55,24 @@ export default function App() {
   const [query, setQuery] = useState("hollywood");
   const [movies, setMovies] = useState([]);
   const [watched, setWatched] = useState(tempWatchedData);
+  const [isLoading, setIsLoading]= useState(false);
   console.log(movies);
   function handleSearch(e){
     setQuery(e);
   }
-  const search=query;
+
   useEffect(function () {
-    fetch(`http://www.omdbapi.com/?apikey=${key}&s=${search}`)
-      .then((res) => res.json())
-      .then((data) => setMovies(data.Search || []));
-  }, [search]);
+    async function fetchMovies() {
+      setIsLoading(true);
+      const res = await fetch(`http://www.omdbapi.com/?apikey=${key}&s=${query}`);
+      const data = await res.json();
+      setMovies(data.Search ? data.Search : []);
+      setIsLoading(false);
+      
+
+    }
+    fetchMovies();
+  }, [query]);
 
   return (
     <>
@@ -76,7 +84,7 @@ export default function App() {
       </Navbar>
       <Main>
         <Box>
-          <Movies movies={movies} />
+          {isLoading ?<Loader/>:<Movies movies={movies} />}
         </Box>
         <Box>
           <WatchedMoviesSummary watched={watched} />
@@ -85,6 +93,9 @@ export default function App() {
       </Main>
     </>
   );
+}
+function Loader(){
+  return <p className="loader">Loading...</p>
 }
 function Navbar({ children }) {
   return (
@@ -137,6 +148,8 @@ function Box({ children }) {
   );
 }
 function Movies({ movies }) {
+  if (movies.length === 0) return <p className="loader">No result found</p>;
+
   return (
     <ul className="list">
       {movies?.map((movie) => (
