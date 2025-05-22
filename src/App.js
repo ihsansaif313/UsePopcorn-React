@@ -55,36 +55,67 @@ export default function App() {
   const [query, setQuery] = useState("hollywood");
   const [movies, setMovies] = useState([]);
   const [watched, setWatched] = useState(tempWatchedData);
-  const [isLoading, setIsLoading]= useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   console.log(movies);
-  function handleSearch(e){
+  function handleSearch(e) {
     setQuery(e);
   }
 
-  useEffect(function () {
-    async function fetchMovies() {
-      setIsLoading(true);
-      const res = await fetch(`http://www.omdbapi.com/?apikey=${key}&s=${query}`);
-      const data = await res.json();
-      setMovies(data.Search ? data.Search : []);
-      setIsLoading(false);
-      
-
-    }
-    fetchMovies();
-  }, [query]);
+  useEffect(
+    function () {
+      async function fetchMovies() {
+        try {
+          setIsLoading(true);
+          setError("");
+          const res = await fetch(
+            `http://www.omdbapi.com/?apikey=${key}&s=${query}`
+          );
+          console.error(res);
+          if (!res.ok) throw new Error("Seems you got offline");
+          const data = await res.json();
+          if (data.Response === "False") {
+            setMovies([]);
+            throw new Error("Movie not found");
+          }
+          setMovies(data.Search ? data.Search : []);
+          setError("");
+        } catch (err) {
+          // Normalize all network errors to your custom message
+          if (
+            err instanceof TypeError ||
+            err.message === "Failed to fetch" ||
+            err.message === "NetworkError when attempting to fetch resource." ||
+            err.message === "Seems you got offline" ||
+            err.message === "Network request failed"
+          ) {
+            setError("Seems you got offline");
+          } else {
+            setError(err.message || "Something went wrong");
+          }
+          setMovies([]);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+      fetchMovies();
+    },
+    [query]
+  );
 
   return (
     <>
       <Navbar>
-        <Search onChange={handleSearch}/>
+        <Search onChange={handleSearch} />
         <WatchedNum>
           Found <strong>{movies.length}</strong> results
         </WatchedNum>
       </Navbar>
       <Main>
         <Box>
-          {isLoading ?<Loader/>:<Movies movies={movies} />}
+          {isLoading && <Loader />}
+          {!isLoading && !error && <Movies movies={movies} />}
+          {error && <ErrorMessage message={error} />}
         </Box>
         <Box>
           <WatchedMoviesSummary watched={watched} />
@@ -94,8 +125,16 @@ export default function App() {
     </>
   );
 }
-function Loader(){
-  return <p className="loader">Loading...</p>
+function ErrorMessage({ message }) {
+  return (
+    <p className="error">
+      <span>⛔</span>
+      {message}
+    </p>
+  );
+}
+function Loader() {
+  return <p className="loader">Loading...</p>;
 }
 function Navbar({ children }) {
   return (
@@ -148,8 +187,6 @@ function Box({ children }) {
   );
 }
 function Movies({ movies }) {
-  if (movies.length === 0) return <p className="loader">No result found</p>;
-
   return (
     <ul className="list">
       {movies?.map((movie) => (
